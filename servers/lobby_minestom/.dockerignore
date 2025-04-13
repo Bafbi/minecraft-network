@@ -1,0 +1,29 @@
+# Gradle build artifacts
+/build
+/.gradle
+
+# IntelliJ / VSCode / Eclipse project files
+.idea
+*.iml
+*.ipr
+*.iws
+.vscode
+.project
+.classpath
+.settings
+
+# OS & tooling clutter
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Logs and temp
+*.log
+*.tmp
+
+# Docker
+Dockerfile
+*compose.[yml|yaml]

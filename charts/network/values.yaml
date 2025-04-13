@@ -1,0 +1,13 @@
+nats:
+  config:
+    cluster:
+      enabled: false
+
+lobby:
+  image: lobby_minestom:latest
+  replicas: 1
+  javaOpts: "-Xms512M -Xmx1G"
+  serviceType: ClusterIP
+
+proxy:
+  secret: "banana27"

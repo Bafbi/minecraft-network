@@ -1,0 +1,11 @@
+services:
+  minestom:
+    build:
+      context: .
+    container_name: lobby_minestom
+    ports:
+      - "25555:25565"
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms512M -Xmx1G"
+      PROXY_SECRET: "banana27"
+    restart: no

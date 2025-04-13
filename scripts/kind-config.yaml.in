@@ -1,0 +1,21 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: minecraft-net
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 25565 # Minecraft proxy
+        hostPort: 25565
+        protocol: TCP
+      - containerPort: 4222 # NATS client
+        hostPort: 4222
+        protocol: TCP
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraMounts:
+      - hostPath: "$HOST_DATA_PATH"
+        containerPath: /mnt/data

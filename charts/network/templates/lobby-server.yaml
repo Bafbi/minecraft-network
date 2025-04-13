@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "network.fullname" . }}-lobby
+  labels:
+    app: {{ include "network.name" . }}
+    role: lobby
+spec:
+  replicas: {{ .Values.lobby.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "network.name" . }}
+      role: lobby
+  template:
+    metadata:
+      labels:
+        app: {{ include "network.name" . }}
+        role: lobby
+    spec:
+      containers:
+        - name: lobby
+          image: {{ .Values.lobby.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 25565
+              name: minecraft
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "{{ .Values.lobby.javaOpts }}"
+            - name: PROXY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "network.fullname" . }}-proxy-secret
+                  key: proxy-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "network.fullname" . }}-lobby
+spec:
+  selector:
+    app: {{ include "network.name" . }}
+    role: lobby
+  ports:
+    - port: 25565
+      targetPort: minecraft
+      protocol: TCP
+      name: minecraft
+  type: {{ .Values.lobby.serviceType }}
