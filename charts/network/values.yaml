@@ -1,7 +1,28 @@
 nats:
   config:
     cluster:
-      enabled: false
+      enabled: true
+      replicas: 2
+
+    jetstream:
+      enabled: true
+
+      # fileStore:
+      #   enabled: false
+
+      # memoryStore:
+      #   enabled: true
+      #   # ensure that container has a sufficient memory limit greater than maxSize
+      #   maxSize: 1Gi
+
+valkey:
+  architecture: standalone
+  auth:
+    enabled: false
+    password: "your-strong-password"
+  primary:
+    persistence:
+      enabled: false # set true for production
 
 lobby:
   image: lobby_minestom:latest
@@ -10,4 +31,21 @@ lobby:
   serviceType: ClusterIP
 
 proxy:
+  image: proxy_gate:latest
+  replicas: 1
+  serviceType: NodePort
+
   secret: "banana27"
+
+  configFile:
+    config:
+      bind: 0.0.0.0:25565
+      debug: false
+      onlineMode: true
+      forceKeyAuthentication: false
+      forwarding:
+        mode: velocity
+      # servers:
+      #   lobby: network-lobby:25565
+      # try:
+      #   - lobby

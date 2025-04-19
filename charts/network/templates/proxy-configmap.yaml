@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "network.fullname" . }}-proxy-config
+data:
+  config.yaml: |
+{{- $configFile := deepCopy .Values.proxy.configFile }}
+{{- if eq $configFile.config.forwarding.mode "velocity" }}
+{{- $_ := set $configFile.config.forwarding "velocitySecret" .Values.proxy.secret }}
+{{- end }}
+{{- if eq $configFile.config.forwarding.mode "bungeeguard" }}
+{{- $_ := set $configFile.config.forwarding "bungeeGuardSecret" .Values.proxy.secret }}
+{{- end }}
+{{ $configFile | toYaml | indent 4 }}

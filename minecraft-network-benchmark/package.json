@@ -1,0 +1,26 @@
+{
+  "name": "minecraft-network-benchmark",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/benchmark.js",
+    "start-dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/benchmark.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.8.0",
+  "dependencies": {
+    "mineflayer": "^4.27.0",
+    "prismarine-viewer": "^1.33.0",
+    "vec3": "^0.1.10"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "nodemon": "^3.1.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}

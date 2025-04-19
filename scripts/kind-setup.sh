@@ -15,8 +15,11 @@ kind create cluster --name minecraft-net --config "${CONFIG_FILE}"
 # Cleanup the temp file
 rm "${CONFIG_FILE}"
 
-# Load your local images if needed
-# kind load docker-image my-custom-proxy:latest --name minecraft-net
+kubectl config use-context kind-minecraft-net
+
+# Build and load the images
+sh "${PROJECT_ROOT}/servers/lobby_minestom/build-and-load.sh"
+sh "${PROJECT_ROOT}/servers/proxy_gate/build-and-load.sh"
 
 # Deploy your Helm stack
 helm install network ${PROJECT_ROOT}/charts/network -f ${PROJECT_ROOT}/values/dev-values.yaml

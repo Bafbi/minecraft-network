@@ -4,7 +4,7 @@ name: minecraft-net
 nodes:
   - role: control-plane
     extraPortMappings:
-      - containerPort: 25565 # Minecraft proxy
+      - containerPort: 30000 # Minecraft proxy
         hostPort: 25565
         protocol: TCP
       - containerPort: 4222 # NATS client

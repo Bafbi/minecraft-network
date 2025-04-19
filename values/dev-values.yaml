@@ -1,2 +1,8 @@
 lobby:
   image: lobby_minestom:dev
+
+proxy:
+  image: proxy_gate:dev
+  configFile:
+    config:
+      onlineMode: false

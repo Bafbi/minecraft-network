@@ -1,0 +1,189 @@
+package network
+
+import (
+	"encoding/json"
+	"math/rand"
+	"net"
+	"slices"
+
+	"github.com/go-logr/logr"
+	"github.com/nats-io/nats.go"
+	"go.minekube.com/common/minecraft/color"
+	c "go.minekube.com/common/minecraft/component"
+	"go.minekube.com/gate/pkg/edition/java/proxy"
+)
+
+func watchServers(p *proxy.Proxy, log logr.Logger) {
+	watcher, err := serversKV.WatchAll()
+	if err != nil {
+		log.Error(err, "Unable to start servers KV watch")
+		return
+	}
+	defer watcher.Stop()
+
+	for entry := range watcher.Updates() {
+		if entry == nil {
+			continue
+		}
+		if entry.Operation() == nats.KeyValueDelete {
+			handleServerUnregistration(entry.Key(), p, log)
+		} else {
+			handleServerRegistration(entry.Key(), entry.Value(), p, log)
+		}
+	}
+}
+
+// handleServerRegistration processes server registration from KV store
+func handleServerRegistration(key string, value []byte, p *proxy.Proxy, log logr.Logger) {
+	var meta Metadata
+	if err := json.Unmarshal(value, &meta); err != nil {
+		log.Error(err, "Failed to unmarshal server info", "key", key)
+		return
+	}
+
+	address, exists := GetAnnotation(&meta, "server/address")
+	if !exists {
+		log.Error(nil, "Server address not found in metadata", "key", key)
+		return
+	}
+	serverAddr, err := net.ResolveTCPAddr("tcp", address)
+	if err != nil {
+		log.Error(err, "Failed to resolve server address", "name", key, "addr", address)
+		return
+	}
+
+	serverInfo := proxy.NewServerInfo(key, serverAddr)
+	serversMu.Lock()
+	defer serversMu.Unlock()
+
+	exists = slices.IndexFunc(servers, func(s proxy.RegisteredServer) bool {
+		return s.ServerInfo().Name() == key
+	}) != -1
+
+	if !exists {
+		// Not registered, so register it
+		registeredServer, err := p.Register(serverInfo)
+		if err != nil {
+			log.Error(err, "Failed to register server", "name", key)
+			return
+		}
+		servers = append(servers, registeredServer)
+	}
+
+	serversMetadata[key] = meta
+	log.Info("Server registered/updated", "name", key, "labels", meta.Labels)
+}
+
+// handleServerUnregistration processes server removal from KV store
+func handleServerUnregistration(key string, p *proxy.Proxy, log logr.Logger) {
+	serversMu.Lock()
+	defer serversMu.Unlock()
+
+	index := slices.IndexFunc(servers, func(s proxy.RegisteredServer) bool {
+		return s.ServerInfo().Name() == key
+	})
+	if index != -1 {
+		server := servers[index]
+		p.Unregister(server.ServerInfo())
+		servers = slices.Delete(servers, index, index+1)
+		delete(serversMetadata, key)
+		log.Info("Server unregistered", "name", key)
+	} else {
+		log.Info("Server not found for unregistration", "name", key)
+	}
+}
+
+// findServersByLabels returns servers matching the provided label selectors
+func findServersByLabels(selectors map[string]string) []proxy.RegisteredServer {
+	serversMu.RLock()
+	defer serversMu.RUnlock()
+
+	var result []proxy.RegisteredServer
+	for _, server := range servers {
+		meta, exists := serversMetadata[server.ServerInfo().Name()]
+		if !exists {
+			continue
+		}
+		if MatchesLabels(&meta, selectors) {
+			result = append(result, server)
+		}
+	}
+	return result
+}
+
+// findRandomServer returns a random server from all available servers
+// Used for initial player connection if no labels specified
+func findRandomServer() proxy.RegisteredServer {
+	serversMu.RLock()
+	defer serversMu.RUnlock()
+
+	if len(servers) == 0 {
+		return nil
+	}
+
+	var chosen proxy.RegisteredServer
+	i := 0
+	n := rand.Intn(len(servers))
+	for _, server := range servers {
+		if i == n {
+			chosen = server
+			break
+		}
+		i++
+	}
+
+	return chosen
+}
+
+// sendPlayerToServer routes a player to an appropriate initial server
+func sendPlayerToServer(p *proxy.Proxy, log logr.Logger) func(*proxy.PlayerChooseInitialServerEvent) {
+	return func(e *proxy.PlayerChooseInitialServerEvent) {
+		player := e.Player()
+		// Default behavior: look for servers with type=lobby
+		lobbyServers := findServersByLabels(map[string]string{"type": "lobby"})
+
+		if len(lobbyServers) == 0 {
+			log.Info("No lobby servers available")
+			player.Disconnect(&c.Text{
+				Content: "No lobby servers available",
+				S:       c.Style{Color: color.Red},
+			})
+			return
+		}
+
+		// Choose random lobby
+		chosen := lobbyServers[rand.Intn(len(lobbyServers))]
+		e.SetInitialServer(chosen)
+		log.Info("Routed player to lobby", "player", e.Player().Username(), "server", chosen.ServerInfo().Name())
+	}
+}
+
+func setServerMetadata(name string, meta Metadata) error {
+	data, err := json.Marshal(meta)
+	if err != nil {
+		return err
+	}
+	_, err = playersKV.Put(name, data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func removeServerMetadata(name string) error {
+	err := serversKV.Delete(name)
+	return err
+}
+
+func updateServerMetadata(server proxy.ServerInfo, fn func(meta *Metadata)) error {
+	name := server.Name()
+	meta, exists := serversMetadata[name]
+	if !exists {
+		meta = Metadata{}
+	}
+	fn(&meta)
+	if err := setServerMetadata(name, meta); err != nil {
+		return err
+	}
+	return nil
+}

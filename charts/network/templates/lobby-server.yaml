@@ -1,11 +1,12 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "network.fullname" . }}-lobby
   labels:
     app: {{ include "network.name" . }}
     role: lobby
 spec:
+  serviceName: {{ include "network.fullname" . }}-lobby
   replicas: {{ .Values.lobby.replicas }}
   selector:
     matchLabels:
@@ -16,7 +17,25 @@ spec:
       labels:
         app: {{ include "network.name" . }}
         role: lobby
+        type: lobby
+        {{- if .Values.lobby.labels }}
+        {{- toYaml .Values.lobby.labels | nindent 8 }}
+        {{- end }}
+      annotations:
+        {{- if .Values.lobby.annotations }}
+        {{- toYaml .Values.lobby.annotations | nindent 8 }}
+        {{- end }}
     spec:
+      volumes:
+        - name: podinfo
+          downwardAPI:
+            items:
+              - path: "labels"
+                fieldRef:
+                  fieldPath: metadata.labels
+              - path: "annotations"
+                fieldRef:
+                  fieldPath: metadata.annotations
       containers:
         - name: lobby
           image: {{ .Values.lobby.image }}
@@ -24,6 +43,9 @@ spec:
           ports:
             - containerPort: 25565
               name: minecraft
+          volumeMounts:
+            - name: podinfo
+              mountPath: /etc/podinfo
           env:
             - name: JAVA_TOOL_OPTIONS
               value: "{{ .Values.lobby.javaOpts }}"
@@ -32,12 +54,23 @@ spec:
                 secretKeyRef:
                   name: {{ include "network.fullname" . }}-proxy-secret
                   key: proxy-secret
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: HEADLESS_SERVICE
+              value: {{ include "network.fullname" . }}-lobby
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "network.fullname" . }}-lobby
 spec:
+  clusterIP: None
   selector:
     app: {{ include "network.name" . }}
     role: lobby
@@ -46,4 +79,3 @@ spec:
       targetPort: minecraft
       protocol: TCP
       name: minecraft
-  type: {{ .Values.lobby.serviceType }}

@@ -1,0 +1,28 @@
+FROM --platform=$BUILDPLATFORM golang:1.24.2 AS build
+
+WORKDIR /workspace
+# Copy the Go Modules manifests
+COPY go.mod go.sum ./
+
+# cache deps before building and copying source so that we don't need to re-download as much
+# and so that source changes don't invalidate our downloaded layer
+RUN go mod download
+
+# Copy the go source
+COPY plugins ./plugins
+COPY util ./util
+COPY gate.go ./
+
+# Automatically provided by the buildkit
+ARG TARGETOS TARGETARCH
+
+# Build
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
+    go build -ldflags="-s -w" -a -o gate gate.go
+
+# Move binary into final image
+# FROM --platform=$BUILDPLATFORM gcr.io/distroless/static-debian11 AS app
+FROM alpine:3.19 AS app
+COPY --from=build /workspace/gate /
+#COPY config.yml /
+CMD ["/gate"]

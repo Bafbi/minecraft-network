@@ -12,8 +12,11 @@ repositories {
 
 dependencies {
     // Change this to the latest version
-    implementation("net.minestom:minestom-snapshots:1_21_5-99d5eca286")
+    implementation("net.minestom:minestom-snapshots:1_21_4-7599413490")
     implementation("ch.qos.logback:logback-classic:1.5.6")
+    implementation("io.nats:jnats:2.21.1")
+    implementation("io.vavr:vavr:0.10.5")
+    implementation("com.google.code.gson:gson:2.13.0")
 }
 
 java {

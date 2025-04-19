@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "network.fullname" . }}-proxy
+  labels:
+    app: {{ include "network.name" . }}
+    role: proxy
+spec:
+  replicas: {{ .Values.proxy.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "network.name" . }}
+      role: proxy
+  template:
+    metadata:
+      labels:
+        app: {{ include "network.name" . }}
+        role: proxy
+    spec:
+      containers:
+        - name: proxy
+          image: {{ .Values.proxy.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 25565
+              name: minecraft
+          # env:
+          #   - name: PROXY_SECRET
+          #     valueFrom:
+          #       secretKeyRef:
+          #         name: {{ include "network.fullname" . }}-proxy-secret
+          #         key: proxy-secret
+          volumeMounts:
+            - name: config
+              mountPath: /config.yml
+              # subPath: config.yaml
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "network.fullname" . }}-proxy-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "network.fullname" . }}-proxy
+spec:
+  selector:
+    app: {{ include "network.name" . }}
+    role: proxy
+  ports:
+    - port: 25565
+      targetPort: minecraft
+      nodePort: 30000
+      name: minecraft
+      protocol: TCP
+  type: {{ .Values.proxy.serviceType }}
