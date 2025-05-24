@@ -1,0 +1,71 @@
+{{- if .Values.permissionsWebapp.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "network.fullname" . }}-perms-webapp
+  labels:
+    {{- include "network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: permissions-webapp
+spec:
+  replicas: {{ .Values.permissionsWebapp.replicas }}
+  selector:
+    matchLabels:
+      {{- include "network.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: permissions-webapp
+  template:
+    metadata:
+      labels:
+        {{- include "network.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: permissions-webapp
+    spec:
+      volumes:
+        - name: casbin-model-config # Volume for the Casbin model
+          configMap:
+            name: {{ include "network.fullname" . }}-casbin-model # Same ConfigMap as the proxy uses
+      containers:
+        - name: webapp
+          image: "{{ .Values.permissionsWebapp.image }}"
+          imagePullPolicy: {{ .Values.permissionsWebapp.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.permissionsWebapp.port }} # e.g., 3001
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "{{ .Values.permissionsWebapp.port }}"
+            - name: CASBIN_MODEL_PATH_WEBAPP # Webapp specific env var name
+              value: "/casbin_config/permissions_model.conf" # Path where model is mounted
+            - name: NATS_URL_WEBAPP # Webapp specific env var name
+              value: "nats://{{ include "network.fullname" . }}-nats:4222"
+            - name: VALKEY_HOST_WEBAPP # Webapp specific env var name
+              value: "{{ .Release.Name }}-valkey-headless"
+            - name: VALKEY_PORT_WEBAPP # Webapp specific env var name
+              value: "6379"
+            {{- if .Values.valkey.auth.enabled }}
+            - name: VALKEY_PASSWORD_WEBAPP # Webapp specific env var name
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Release.Name }}-valkey"
+                  key: "valkey-password" # Verify this key
+            {{- end }}
+          volumeMounts:
+            - name: casbin-model-config
+              mountPath: /casbin_config # Directory for permissions_model.conf
+              readOnly: true
+          # {{- if .Values.permissionsWebapp.resources }}
+          # resources:
+          #   {{- toYaml .Values.permissionsWebapp.resources | nindent 12 }}
+          # {{- end }}
+          livenessProbe:
+            httpGet:
+              path: / # Assuming a root path that returns 200 OK
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: / # Or a specific health check endpoint if you add one
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+{{- end }}

@@ -1,0 +1,20 @@
+{{- if .Values.permissionsWebapp.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "network.fullname" . }}-perms-webapp
+  labels:
+    {{- include "network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: permissions-webapp
+spec:
+  type: {{ .Values.permissionsWebapp.service.type }}
+  ports:
+    - port: {{ .Values.permissionsWebapp.service.port }} # e.g., 80
+      targetPort: http # Refers to the containerPort name 'http' (e.g., 3001)
+      protocol: TCP
+      name: http
+      nodePort: {{ .Values.permissionsWebapp.service.nodePort }}
+  selector:
+    {{- include "network.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: permissions-webapp
+{{- end }}

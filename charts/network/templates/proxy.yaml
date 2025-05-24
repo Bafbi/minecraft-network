@@ -3,50 +3,82 @@ kind: Deployment
 metadata:
   name: {{ include "network.fullname" . }}-proxy
   labels:
-    app: {{ include "network.name" . }}
-    role: proxy
+    {{- include "network.labels" . | nindent 4 }} # Use the common labels template
+    role: proxy # Specific role label
 spec:
   replicas: {{ .Values.proxy.replicas }}
   selector:
     matchLabels:
-      app: {{ include "network.name" . }}
-      role: proxy
+      {{- include "network.selectorLabels" . | nindent 6 }} # Use selectorLabels template
+      role: proxy # Specific role label for selector
   template:
     metadata:
       labels:
-        app: {{ include "network.name" . }}
-        role: proxy
+        {{- include "network.selectorLabels" . | nindent 8 }} # Use selectorLabels template
+        role: proxy # Specific role label for pod
     spec:
       containers:
         - name: proxy
           image: {{ .Values.proxy.image }}
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: IfNotPresent # Or Always, or as needed
           ports:
-            - containerPort: 25565
+            - containerPort: 25565 # Assuming Gate listens on 25565 internally
               name: minecraft
-          # env:
-          #   - name: PROXY_SECRET
-          #     valueFrom:
-          #       secretKeyRef:
-          #         name: {{ include "network.fullname" . }}-proxy-secret
-          #         key: proxy-secret
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: CASBIN_MODEL_PATH
+              value: "/casbin_config/permissions_model.conf" # Path where model is mounted
+            - name: NATS_URL
+              # Assumes NATS service is named based on the release name + "-nats"
+              value: "nats://{{ include "network.fullname" . }}-nats:4222"
+            - name: VALKEY_HOST
+              # Default headless service name for Bitnami Valkey is often <releaseName>-valkey-headless
+              value: "{{ .Release.Name }}-valkey-headless"
+            - name: VALKEY_PORT
+              value: "6379" # Default Valkey/Redis port
+            {{- if .Values.valkey.auth.enabled }}
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  # The secret name and key depend on how the Bitnami Valkey chart creates it.
+                  # Typically: <releaseName>-valkey
+                  # Key: valkey-password or redis-password
+                  name: "{{ .Release.Name }}-valkey"
+                  key: "valkey-password" # Verify this key from Bitnami Valkey chart docs/output
+            {{- else }}
+            # Even if auth is disabled, provide an empty password var if your app expects it, or omit.
+            # - name: VALKEY_PASSWORD
+            #   value: ""
+            {{- end }}
           volumeMounts:
-            - name: config
-              mountPath: /config.yml
-              # subPath: config.yaml
+            - name: config # Gate's own config.yml
+              mountPath: /config.yml # Assuming Gate looks for config.yml at the root
+              subPath: config.yaml
+              readOnly: true
+            - name: casbin-config # Casbin model
+              mountPath: /casbin_config # Directory where permissions_model.conf will be
               readOnly: true
       volumes:
         - name: config
           configMap:
             name: {{ include "network.fullname" . }}-proxy-config
+        - name: casbin-config
+          configMap:
+            name: {{ include "network.fullname" . }}-casbin-model
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "network.fullname" . }}-proxy
+  labels:
+    {{- include "network.labels" . | nindent 4 }}
+    role: proxy
 spec:
   selector:
-    app: {{ include "network.name" . }}
+    {{- include "network.selectorLabels" . | nindent 4 }}
     role: proxy
   ports:
     - port: 25565

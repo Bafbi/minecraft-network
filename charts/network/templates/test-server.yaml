@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "network.fullname" . }}-test
+  labels:
+    app: {{ include "network.name" . }}
+    role: test
+spec:
+  serviceName: {{ include "network.fullname" . }}-test
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "network.name" . }}
+      role: test
+  template:
+    metadata:
+      labels:
+        app: {{ include "network.name" . }}
+        role: test
+        type: test
+        chat-zone: test
+      annotations:
+        {{- if .Values.lobby.annotations }}
+        {{- toYaml .Values.lobby.annotations | nindent 8 }}
+        {{- end }}
+    spec:
+      volumes:
+        - name: podinfo
+          downwardAPI:
+            items:
+              - path: "labels"
+                fieldRef:
+                  fieldPath: metadata.labels
+              - path: "annotations"
+                fieldRef:
+                  fieldPath: metadata.annotations
+      containers:
+        - name: test
+          image: {{ .Values.lobby.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 25565
+              name: minecraft
+          volumeMounts:
+            - name: podinfo
+              mountPath: /etc/podinfo
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "{{ .Values.lobby.javaOpts }}"
+            - name: PROXY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "network.fullname" . }}-proxy-secret
+                  key: proxy-secret
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: HEADLESS_SERVICE
+              value: {{ include "network.fullname" . }}-test
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "network.fullname" . }}-test
+spec:
+  clusterIP: None
+  selector:
+    app: {{ include "network.name" . }}
+    role: test
+  ports:
+    - port: 25565
+      targetPort: minecraft
+      protocol: TCP
+      name: minecraft
