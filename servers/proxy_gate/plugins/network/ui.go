@@ -18,29 +18,8 @@ func addServerToTabList(p *proxy.Proxy, log logr.Logger) func(e *proxy.ServerPos
 			S:       c.Style{Color: color.Yellow, Bold: c.True},
 		}
 
-		// Get server metadata safely
-		serversMu.RLock()
-		meta, ok := serversMetadata[serverName]
-		serversMu.RUnlock()
-
-		footerContent := fmt.Sprintf("\n# Server: %s\n", serverName)
-		if ok {
-			if len(meta.Labels) > 0 {
-				footerContent += "Labels:\n"
-				for k, v := range meta.Labels {
-					footerContent += fmt.Sprintf("  %s: %s\n", k, v)
-				}
-			}
-			if len(meta.Annotations) > 0 {
-				footerContent += "Annotations:\n"
-				for k, v := range meta.Annotations {
-					footerContent += fmt.Sprintf("  %s: %s\n", k, v)
-				}
-			}
-		}
-
 		footer := &c.Text{
-			Content: footerContent,
+			Content: fmt.Sprintf("You are connected to %s\n", serverName),
 			S:       c.Style{Color: color.Gray},
 		}
 

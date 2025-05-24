@@ -15,8 +15,13 @@ require (
 require (
 	buf.build/gen/go/minekube/connect/protocolbuffers/go v1.35.2-20240220124425-904ce30425c9.1 // indirect
 	connectrpc.com/connect v1.17.0 // indirect
+	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/Tnze/go-mc v1.20.2 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
+	github.com/bmatcuk/doublestar/v4 v4.6.1 // indirect
+	github.com/casbin/casbin/v2 v2.105.0 // indirect
+	github.com/casbin/govaluate v1.3.0 // indirect
+	github.com/casbin/redis-adapter/v3 v3.5.0 // indirect
 	github.com/coder/websocket v1.8.12 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/dboslee/lru v0.0.1 // indirect
@@ -28,6 +33,7 @@ require (
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
+	github.com/gomodule/redigo v1.8.9 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/jellydator/ttlcache/v3 v3.3.0 // indirect

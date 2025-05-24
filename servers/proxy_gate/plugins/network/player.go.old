@@ -1,0 +1,232 @@
+package network
+
+import (
+	"encoding/json"
+	"fmt"
+	"sync"
+
+	"github.com/bafbi/minecraft-network/servers/proxy_gate/plugins/network/permissions"
+	"github.com/bafbi/minecraft-network/servers/proxy_gate/util/metadata"
+	"github.com/go-logr/logr"
+	"github.com/nats-io/nats.go"
+	"go.minekube.com/gate/pkg/edition/java/proxy"
+	"go.minekube.com/gate/pkg/util/uuid"
+)
+
+var (
+	playersKV       nats.KeyValue
+	playerMu        sync.RWMutex
+	playersMetadata = make(map[uuid.UUID]metadata.Metadata) // uuid → player metadata
+	nameToUUID      = make(map[string]uuid.UUID)            // name → uuid
+)
+
+func initializePlayersKVStore(js nats.JetStreamContext, log logr.Logger) error {
+	var err error
+	playersKV, err = js.KeyValue("players")
+	if err != nil {
+		playersKV, err = js.CreateKeyValue(&nats.KeyValueConfig{
+			Bucket: "players",
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create players KV store: %w", err)
+		}
+	}
+	return nil
+}
+
+func watchPlayersKV(p *proxy.Proxy, log logr.Logger) {
+	watcher, err := playersKV.WatchAll()
+	if err != nil {
+		log.Error(err, "Unable to start player KV watch")
+		return
+	}
+	defer watcher.Stop()
+
+	for entry := range watcher.Updates() {
+		if entry == nil {
+			continue
+		}
+		uuid, err := uuid.Parse(entry.Key())
+		if err != nil {
+			log.Error(err, "Failed to parse player UUID", "key", entry.Key())
+			continue
+		}
+		if entry.Operation() == nats.KeyValueDelete {
+			playerMu.Lock()
+			delete(playersMetadata, uuid)
+			playerMu.Unlock()
+		} else {
+			var meta metadata.Metadata
+			err := json.Unmarshal(entry.Value(), &meta)
+			if err != nil {
+				log.Error(err, "Failed to unmarshal player info", "key", entry.Key())
+				continue
+			}
+			name, exists := (&meta).GetAnnotation("player/name")
+			if !exists {
+				log.Error(nil, "Player name not found in metadata", "key", entry.Key())
+			}
+
+			playerMu.Lock()
+			playersMetadata[uuid] = meta
+			nameToUUID[name] = uuid
+			playerMu.Unlock()
+		}
+	}
+}
+
+func trackPlayerServer(log logr.Logger) func(e *proxy.ServerConnectedEvent) {
+	return func(e *proxy.ServerConnectedEvent) {
+		player := e.Player()
+		server := e.Server()
+		serverInfo := server.ServerInfo()
+		serverMeta, exists := getServerMetadataByName(serverInfo.Name())
+		if !exists {
+			log.Error(fmt.Errorf("server not found"), "Server not found", "name", serverInfo.Name())
+			return
+		}
+		serverChatZone, serverChatZoneExists := (&serverMeta).GetLabel(chatZoneLabel)
+		previousServer := e.PreviousServer()
+		var previousServerChatZone string
+		var previousServerChatZoneExists bool
+		if previousServer != nil {
+			previousServerMeta, exists := getServerMetadataByName(previousServer.ServerInfo().Name())
+			if !exists {
+				log.Error(fmt.Errorf("previous server not found"), "Previous server not found", "name", previousServer.ServerInfo().Name())
+				return
+			}
+			previousServerChatZone, previousServerChatZoneExists = (&previousServerMeta).GetLabel(chatZoneLabel)
+		}
+
+		err := updatePlayerMetadata(player, func(meta *metadata.Metadata) {
+			meta.SetAnnotation("network/location", serverInfo.Name())
+			meta.SetAnnotation("player/name", player.GameProfile().Name)
+			if previousServerChatZoneExists {
+				meta.RemoveAnnotationStringValue(chatListenZonesAnnotation, previousServerChatZone)
+			}
+			if serverChatZoneExists {
+				meta.AddAnnotationStringValue(chatListenZonesAnnotation, serverChatZone)
+			}
+
+		})
+		if err != nil {
+			log.Error(err, "Failed to update player metadata", "player", player.Username())
+			return
+		}
+		log.Info("Tracking player location", "player", player.Username(), "server", serverInfo.Name())
+	}
+}
+
+// Track player disconnects to remove from KV
+func trackPlayerDisconnect(log logr.Logger) func(e *proxy.DisconnectEvent) {
+	return func(e *proxy.DisconnectEvent) {
+		player := e.Player()
+
+		err := removePlayerMetadata(player.ID())
+		if err != nil {
+			log.Error(err, "Failed to remove player metadata", "player", player.Username())
+			return
+		}
+
+		log.Info("Removed player tracking", "player", player.Username())
+	}
+}
+
+func getPlayerMetadataByName(name string) (metadata.Metadata, bool) {
+	playerMu.RLock()
+	defer playerMu.RUnlock()
+	uuid, exists := nameToUUID[name]
+	if !exists {
+		return metadata.Metadata{}, false
+	}
+
+	return getPlayerMetadataByUUID(uuid)
+}
+
+func getPlayerMetadataByUUID(uuid uuid.UUID) (metadata.Metadata, bool) {
+	playerMu.RLock()
+	defer playerMu.RUnlock()
+	meta, exists := playersMetadata[uuid]
+	if !exists {
+		return metadata.Metadata{}, false
+	}
+	return meta, true
+}
+
+func getPlayerMetadata(player proxy.Player) (metadata.Metadata, bool) {
+	return getPlayerMetadataByUUID(player.ID())
+}
+
+func setPlayerMetadata(uuid uuid.UUID, meta metadata.Metadata) error {
+	data, err := json.Marshal(meta)
+	if err != nil {
+		return err
+	}
+	_, err = playersKV.Put(uuid.String(), data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func removePlayerMetadata(uuid uuid.UUID) error {
+	err := playersKV.Delete(uuid.String())
+	return err
+}
+
+func updatePlayerMetadata(player proxy.Player, fn func(meta *metadata.Metadata)) error {
+	uuid := player.ID()
+	return updatePlayerMetadataByUUID(uuid, fn)
+}
+
+func updatePlayerMetadataByUUID(uuid uuid.UUID, fn func(meta *metadata.Metadata)) error {
+	playerMu.RLock()
+	defer playerMu.RUnlock()
+	meta, exists := playersMetadata[uuid]
+	if !exists {
+		meta = metadata.Metadata{}
+	}
+	fn(&meta)
+	if err := setPlayerMetadata(uuid, meta); err != nil {
+		return err
+	}
+	return nil
+}
+
+func updatePlayerMetadataByName(name string, fn func(meta *metadata.Metadata)) error {
+	uuid, exists := nameToUUID[name]
+	if !exists {
+		return fmt.Errorf("player %s not found", name)
+	}
+	return updatePlayerMetadataByUUID(uuid, fn)
+}
+
+// GetPlayerMetadataSnapshot creates a snapshot of current player data for safe access.
+// This is intended to be called from the main network package thread.
+func GetPlayerMetadataSnapshot(p *proxy.Proxy) permissions.PlayerMetadataSnapshot {
+	playerMu.RLock()
+	defer playerMu.RUnlock()
+
+	// Deep copy maps to avoid race conditions if the caller modifies them (though they shouldn't)
+	// For read-only usage, shallow copy is often fine, but deep copy is safer.
+	playersCopy := make(map[uuid.UUID]metadata.Metadata, len(playersMetadata))
+	for k, v := range playersMetadata {
+		// Assuming Metadata is simple enough for a direct copy. If it contains pointers/slices,
+		// a deeper copy might be needed for true isolation.
+		playersCopy[k] = v
+	}
+
+	nameToUUIDCopy := make(map[string]uuid.UUID, len(nameToUUID))
+	for k, v := range nameToUUID {
+		nameToUUIDCopy[k] = v
+	}
+
+	// Get online players from the proxy instance
+	onlinePlayers := p.Players() // This returns a slice of current players
+
+	return permissions.PlayerMetadataSnapshot{
+		Players:       playersCopy,
+		NameToUUID:    nameToUUIDCopy,
+		OnlinePlayers: onlinePlayers,
+	}
+}
