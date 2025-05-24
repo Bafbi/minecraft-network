@@ -7,6 +7,9 @@ nodes:
       - containerPort: 30000 # Minecraft proxy
         hostPort: 25565
         protocol: TCP
+      - containerPort: 30001 # Permissions WebApp NodePort (NEW)
+        hostPort: 30001      # Host port for Permissions WebApp (can be same as NodePort for simplicity)
+        protocol: TCP
       - containerPort: 4222 # NATS client
         hostPort: 4222
         protocol: TCP
