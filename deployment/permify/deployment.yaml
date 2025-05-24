@@ -1,0 +1,14 @@
+vars:
+  - values:
+      cluster_name: "permify-cluster"
+      user: "permify"
+      database: "permify"
+
+
+deployments:
+  - path: db
+    waitReadiness: true
+  - path: template
+    waitReadiness: true
+  - barrier: true
+  - path: app

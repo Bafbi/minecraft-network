@@ -1,0 +1,15 @@
+deployments:
+  - path: common
+  - path: proxy
+  - include: servers
+
+commonLabels:
+  {{ args.domain }}/owner-name: "{{ network.owner.name }}"
+  {{ args.domain }}/owner-uuid: "{{ network.owner.uuid }}"
+
+commonAnnotations:
+  {{ args.domain }}/owner-name: "{{ network.owner.name }}"
+  {{ args.domain }}/owner-email: "{{ network.owner.email }}"
+  {{ args.domain }}/owner-uuid: "{{ network.owner.uuid }}"
+  {{ args.domain }}/description: "{{ network.description }}"
+  {{ args.domain }}/admins: "{{ network.admins | join(',') }}"

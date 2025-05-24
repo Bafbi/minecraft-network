@@ -1,0 +1,19 @@
+architecture: {{ valkey.architecture }}
+
+auth:
+  enabled: false
+
+{% if valkey.architecture == "replication" %}
+sentinel:
+  enabled: true
+  quorum: 2
+
+replica:
+  replicaCount: 3
+  persistence:
+    enabled: true
+{% endif %}
+
+master:
+  persistence:
+    enabled: true

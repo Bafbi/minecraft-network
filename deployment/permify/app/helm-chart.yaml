@@ -1,0 +1,7 @@
+helmChart:
+  repo: https://permify.github.io/helm-charts
+  chartName: permify
+  chartVersion: 0.4.0
+  releaseName: "{{ args.project_name }}"
+  namespace: "{{ namespace }}"
+  output: deploy-chart.yaml

@@ -1,0 +1,4 @@
+valkey:
+  architecture: standalone
+
+patate: 1

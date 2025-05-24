@@ -1,0 +1,18 @@
+discriminator: "{{ args.project_name }}-{{ target.name }}"
+
+targets:
+  - name: local-dev
+    args:
+      env_type: dev
+      enable_debug: true
+      domain: network.local
+      proxy_secret: "banana27"
+
+args:
+  - name: env_type
+  - name: enable_debug
+    default: false
+  - name: project_name
+    default: mc-network
+  - name: domain
+  - name: proxy_secret

@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: proxy
+spec:
+  replicas: {{ get_var("proxy.replicas", 1) }}
+  template:
+    spec:
+      containers:
+        - name: proxy
+          image: "{{ images.get_image('proxy_gate') }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 25565
+              name: minecraft
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: CASBIN_MODEL_PATH
+              value: "/casbin_config/permissions_model.conf"
+            - name: NATS_URL
+              value: "nats://{{ args.project_name }}-nats:4222"
+            - name: VALKEY_HOST
+              value: "{{ args.project_name }}-valkey-headless"
+            - name: VALKEY_PORT
+              value: "6379"
+            # If you want to support password, uncomment and set accordingly
+            # - name: VALKEY_PASSWORD
+            #   value: ""
+          volumeMounts:
+            - name: config
+              mountPath: /config.yml
+              subPath: gate-config.yaml
+              readOnly: true
+            - name: casbin-config
+              mountPath: /casbin_config
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: proxy-config
+        - name: casbin-config
+          configMap:
+            name: casbin-model

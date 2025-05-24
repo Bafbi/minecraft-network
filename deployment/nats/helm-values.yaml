@@ -1,0 +1,14 @@
+jetstream:
+  enabled: true
+
+persistence:
+  enabled: true
+
+resourceType: statefulset
+
+auth:
+  enabled: false
+
+cluster:
+  auth:
+    enabled: false

@@ -1,0 +1,7 @@
+vars:
+  - values:
+      namespace: "{{ args.project_name }}-{{ target.name }}"
+
+deployments:
+  - include: kluctl
+  - include: deployment

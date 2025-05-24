@@ -1,0 +1,6 @@
+helmChart:
+  repo: oci://registry-1.docker.io/bitnamicharts/nats
+  chartVersion: 9.0.17
+  releaseName: "{{ args.project_name }}"
+  namespace: "{{ namespace }}"
+  output: deploy-chart.yaml

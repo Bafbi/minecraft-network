@@ -1,0 +1,7 @@
+helmChart:
+  repo: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
+  chartName: postgres-operator
+  chartVersion: 1.14.0
+  releaseName: "{{ args.project_name }}"
+  namespace: "{{ namespace }}"
+  output: deploy-chart.yaml

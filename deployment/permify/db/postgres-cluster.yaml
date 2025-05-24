@@ -1,0 +1,23 @@
+apiVersion: "acid.zalan.do/v1"
+kind: postgresql
+metadata:
+  name: permify-cluster
+spec:
+  teamId: "permify"
+  volume:
+    size: 1Gi
+  numberOfInstances: 1
+  users:
+    # database owner
+    {{ user }}:
+    - superuser
+    - createdb
+
+    # role for application foo
+    foo_user: # or 'foo_user: []'
+
+  #databases: name->owner
+  databases:
+    {{ database }}: {{ user }}
+  postgresql:
+    version: "17"

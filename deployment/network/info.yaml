@@ -1,0 +1,9 @@
+network:
+  owner:
+    name: "Bafbi"
+    email: "bafbi3@gmail.com"
+    uuid: "6eb73524-ff88-4a62-a8d0-c63905e7afba"
+  description: "Minecraft Network using gate proxy and multiple type of servers"
+  admins:
+    - "73e0e19b-d4e4-4cc1-a553-a3952f0c1aed"
+    - "6eb73524-ff88-4a62-a8d0-c63905e7afba"

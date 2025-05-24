@@ -1,0 +1,6 @@
+helmChart:
+  repo: oci://ghcr.io/kluctl/charts/template-controller
+  chartVersion: 0.9.4
+  releaseName: "{{ args.project_name }}"
+  namespace: "{{ namespace }}"
+  output: deploy-chart.yaml

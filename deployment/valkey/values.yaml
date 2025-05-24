@@ -1,0 +1,86 @@
+nats:
+  config:
+    cluster:
+      enabled: true
+      replicas: 3
+
+    jetstream:
+      enabled: true
+
+      # fileStore:
+      #   enabled: false
+
+      # memoryStore:
+      #   enabled: true
+      #   # ensure that container has a sufficient memory limit greater than maxSize
+      #   maxSize: 1Gi
+
+valkey:
+  architecture: standalone
+  auth:
+    enabled: false
+    password: "your-strong-password"
+  primary:
+    persistence:
+      enabled: false # set true for production
+
+permissionsWebapp:
+  enabled: true # To easily enable/disable deploying this component
+  image: "permissions-webapp:latest" # Replace with your actual image tag, e.g., from ghcr.io
+  imagePullPolicy: IfNotPresent # Or Always
+  replicas: 1
+  port: 3001 # Internal port the webapp listens on
+
+  # Environment variables will be set in the deployment template,
+  # referencing other services (NATS, Valkey) and ConfigMaps.
+
+  service:
+    type: ClusterIP # Typically internal, expose via Ingress if needed externally
+    port: 80 # Port the service will expose (can be different from container's targetPort)
+    nodePort: null # No NodePort by default for ClusterIP
+
+  # If you want to expose it via Ingress (optional)
+  ingress:
+    enabled: false
+    className: "nginx" # Or your ingress controller
+    annotations:
+      {}
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+    hosts:
+      - host: permissions.yourdomain.com
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls: []
+    #  - secretName: permissions-tls
+    #    hosts:
+    #      - permissions.yourdomain.com
+
+lobby:
+  image: lobby_minestom:latest
+  replicas: 1
+  javaOpts: "-Xms512M -Xmx1G"
+  serviceType: ClusterIP
+  labels:
+    chat-zone: lobby
+
+proxy:
+  image: proxy_gate:latest
+  replicas: 1
+  serviceType: NodePort
+
+  secret: "banana27"
+
+  configFile:
+    config:
+      bind: 0.0.0.0:25565
+      debug: false
+      onlineMode: true
+      forceKeyAuthentication: false
+      forwarding:
+        mode: velocity
+      # servers:
+      #   lobby: network-lobby:25565
+      # try:
+      #   - lobby

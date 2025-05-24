@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: permissions-checker
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: permissions-checker
+          image: "{{ images.get_image('permissions-checker') }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 50051
+              name: grpc
+          env:
+            - name: NATS_ADDR
+              value: "nats://{{ args.project_name }}-nats:4222"
+            - name: VALKEY_ADDR
+              value: "{{ args.project_name }}-valkey-headless:6379"

@@ -1,0 +1,6 @@
+helmChart:
+  repo: oci://registry-1.docker.io/bitnamicharts/valkey
+  chartVersion: 3.0.4
+  releaseName: "{{ args.project_name }}"
+  namespace: "{{ namespace }}"
+  output: deploy-chart.yaml

@@ -1,0 +1,31 @@
+vars:
+  - file: "vars/common.yaml"
+  - file: "vars/{{ args.env_type }}.yaml"
+  - file: images/{{ args.env_type }}.yaml
+  - file: network/info.yaml
+
+deployments:
+  - path: namespace
+  - barrier: true
+  - path: template-controller
+    waitReadiness: true
+  - path: postgres-operator
+    waitReadiness: true
+  - path: nats
+    waitReadiness: true
+  - path: valkey
+    waitReadiness: true
+  - barrier: true
+    message: "Waiting for all deployments to be ready"
+  # - include: permify
+  - include: services
+  - barrier: true
+  - include: network
+
+commonLabels:
+  app.kubernetes.io/part-of: {{ args.project_name }}
+  app.kubernetes.io/managed-by: kluctl
+  app.kubernetes.io/environment: "{{ args.env_type }}"
+  {{ args.domain }}/target: "{{ target.name }}"
+
+overrideNamespace: "{{ namespace }}"

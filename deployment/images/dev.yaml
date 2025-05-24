@@ -1,0 +1,5 @@
+images:
+  - image: proxy_gate
+    resultImage: proxy_gate:dev
+  - image: permissions-checker
+    resultImage: permissions-checker:dev
