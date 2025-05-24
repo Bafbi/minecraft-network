@@ -1,0 +1,10 @@
+
+
+deployments:
+  - path: namespace
+  - barrier: true
+  - git:
+      url: https://github.com/kluctl/kluctl.git
+      subDir: install/webui
+      ref:
+        tag: v2.26.0
