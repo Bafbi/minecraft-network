@@ -1,8 +1,25 @@
 lobby:
+  replicas: 2
   image: lobby_minestom:dev
 
 proxy:
   image: proxy_gate:dev
+  replicas: 2
   configFile:
     config:
+      debug: false
       onlineMode: false
+      # servers:
+      #   lobby: network-lobby-0:25565
+      # try:
+      #   - lobby
+
+# Permissions Webapp configuration for development
+permissionsWebapp:
+  enabled: true
+  image: "permissions-webapp:dev" # Use :dev tag for local builds
+
+  service:
+    type: NodePort # Expose via NodePort for local access
+    port: 80 # The port the Service will expose ClusterIP on (e.g., http://perms-webapp-svc:80)
+    nodePort: 30001 # The specific NodePort to use on the Kind node
