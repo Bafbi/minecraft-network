@@ -1,0 +1,65 @@
+// services/permissions-editor/templates/policies.gohtml
+package templates
+
+import (
+	"fmt"
+	authpb "github.com/bafbi/minecraft-network/services/permissions-checker/auth"
+)
+
+templ Policies(rules []*authpb.PolicyRule) {
+	<h2 class="text-2xl font-bold mb-4">Casbin Policies</h2>
+
+	@PolicyForm(nil)
+
+	<h3 class="text-xl font-semibold my-4">Existing Policies</h3>
+	<div class="overflow-x-auto">
+		<table class="min-w-full bg-white border border-gray-200">
+			<thead>
+				<tr>
+					<th class="py-2 px-4 border-b text-left">ID</th>
+					<th class="py-2 px-4 border-b text-left">Action</th>
+					<th class="py-2 px-4 border-b text-left">Resource</th>
+					<th class="py-2 px-4 border-b text-left">Player Condition</th>
+					<th class="py-2 px-4 border-b text-left">Server Condition</th>
+					<th class="py-2 px-4 border-b text-left">Effect</th>
+					<th class="py-2 px-4 border-b">Priority</th>
+					<th class="py-2 px-4 border-b">Actions</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, rule := range rules {
+					<tr id={ fmt.Sprintf("policy-%s", rule.GetId()) }>
+						<td class="py-2 px-4 border-b">{ rule.GetId() }</td>
+						<td class="py-2 px-4 border-b">{ rule.GetTargetAction() }</td>
+						<td class="py-2 px-4 border-b">{ rule.GetTargetResource() }</td>
+						<td class="py-2 px-4 border-b">{ rule.GetPlayerConditionExpression() }</td>
+						<td class="py-2 px-4 border-b">{ rule.GetServerConditionExpression() }</td>
+						<td class="py-2 px-4 border-b">{ rule.GetEffect() }</td>
+						<td class="py-2 px-4 border-b">{ fmt.Sprintf("%d", rule.GetPriority()) }</td>
+						<td class="py-2 px-4 border-b">
+							<button
+								class="btn-red"
+								hx-delete="/policies"
+								hx-confirm={ fmt.Sprintf("Are you sure you want to delete policy '%s'?", rule.GetId()) }
+								hx-target={ fmt.Sprintf("#policy-%s", rule.GetId()) }
+								hx-swap="outerHTML swap:1s"
+								name="id" value={ rule.GetId() }
+								name="targetAction" value={ rule.GetTargetAction() }
+								name="targetResource" value={ rule.GetTargetResource() }
+								name="playerConditionExpression" value={ rule.GetPlayerConditionExpression() }
+								name="serverConditionExpression" value={ rule.GetServerConditionExpression() }
+								name="effect" value={ rule.GetEffect() }
+								name="priority" value={ fmt.Sprintf("%d", rule.GetPriority()) }
+							>
+								Delete
+							</button>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	</div>
+	if len(rules) == 0 {
+		<p class="mt-4 text-gray-600">No policies found. Add a new one using the form above.</p>
+	}
+}

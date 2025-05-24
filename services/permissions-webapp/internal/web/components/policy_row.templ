@@ -1,0 +1,30 @@
+package components
+
+// PolicyViewData might hold the actual policy strings
+type PolicyRule struct {
+	SubLogic string
+	ObjLogic string
+	Action   string
+	Effect   string
+}
+
+templ PolicyRow(p PolicyRule) {
+	<tr>
+		<td>{ p.SubLogic }</td>
+		<td>{ p.ObjLogic }</td>
+		<td>{ p.Action }</td>
+		<td>{ p.Effect }</td>
+		<td>
+			<button
+				class="secondary outline"
+				hx-post={ "/policies/remove" }
+				hx-vals={ `{"sub_logic": "` + p.SubLogic + `", "obj_logic": "` + p.ObjLogic + `", "action": "` + p.Action + `", "effect": "` + p.Effect + `"}` }
+				hx-target="closest tr"
+				hx-swap="outerHTML"
+				hx-confirm={ "Are you sure you want to delete this policy?" }
+			>
+				Delete
+			</button>
+		</td>
+	</tr>
+}

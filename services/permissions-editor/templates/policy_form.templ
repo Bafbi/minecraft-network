@@ -1,0 +1,56 @@
+// services/permissions-editor/templates/policy_form.gohtml
+package templates
+
+import (
+	authpb "github.com/bafbi/minecraft-network/services/permissions-checker/auth"
+)
+
+templ PolicyForm(policy *authpb.PolicyRule) {
+	<h3 class="text-xl font-semibold mb-2">{ GetPolicyFormButtonText(policy) }</h3>
+	<form hx-post="/policies" hx-target="#content" hx-swap="innerHTML">
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<div>
+				<label for="id" class="block text-sm font-medium text-gray-700">ID</label>
+				<input type="text" id="id" name="id"
+					value={ GetPolicyFieldString(policy, "id") }
+					class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"/>
+			</div>
+			<div>
+				<label for="targetAction" class="block text-sm font-medium text-gray-700">Target Action</label>
+				<input type="text" id="targetAction" name="targetAction"
+					value={ GetPolicyFieldString(policy, "targetAction") }
+					class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" placeholder="e.g., connect, command:kick, command:*"/>
+			</div>
+			<div>
+				<label for="targetResource" class="block text-sm font-medium text-gray-700">Target Resource</label>
+				<input type="text" id="targetResource" name="targetResource"
+					value={ GetPolicyFieldString(policy, "targetResource") }
+					class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" placeholder="e.g., server:survival, command:kick, *"/>
+			</div>
+			<div>
+				<label for="effect" class="block text-sm font-medium text-gray-700">Effect</label>
+				<select id="effect" name="effect" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+					<option value="allow" selected={ IsSelected(GetPolicyFieldString(policy, "effect"), "allow") }>Allow</option>
+					<option value="deny" selected={ IsSelected(GetPolicyFieldString(policy, "effect"), "deny") }>Deny</option>
+				</select>
+			</div>
+			<div>
+				<label for="priority" class="block text-sm font-medium text-gray-700">Priority</label>
+				<input type="number" id="priority" name="priority"
+					value={ GetPolicyPriorityString(policy) }
+					class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"/>
+			</div>
+		</div>
+		<div class="mt-4">
+			<label for="playerConditionExpression" class="block text-sm font-medium text-gray-700">Player Condition Expression</label>
+			<textarea id="playerConditionExpression" name="playerConditionExpression" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" rows="3" placeholder="e.g., r.player['role'] == 'admin'">{ GetPolicyConditionDefault(policy, "playerConditionExpression") }</textarea>
+		</div>
+		<div class="mt-4">
+			<label for="serverConditionExpression" class="block text-sm font-medium text-gray-700">Server Condition Expression</label>
+			<textarea id="serverConditionExpression" name="serverConditionExpression" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" rows="3" placeholder="e.g., float(r.server['current_players']) < float(r.server['max_player'])">{ GetPolicyConditionDefault(policy, "serverConditionExpression") }</textarea>
+		</div>
+		<div class="mt-6">
+			<button type="submit" class="btn-green">{ GetPolicyFormButtonText(policy) }</button>
+		</div>
+	</form>
+}

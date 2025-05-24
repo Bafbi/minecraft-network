@@ -1,0 +1,31 @@
+// services/permissions-editor/templates/servers.gohtml
+package templates
+
+import "fmt"
+
+templ ServersList(names []string) {
+	<h2 class="text-2xl font-bold mb-4">Server Metadata</h2>
+	<div class="overflow-x-auto">
+		<table class="min-w-full bg-white border border-gray-200">
+			<thead>
+				<tr>
+					<th class="py-2 px-4 border-b">Server Name</th>
+					<th class="py-2 px-4 border-b">Actions</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, name := range names {
+					<tr>
+						<td class="py-2 px-4 border-b">{ name }</td>
+						<td class="py-2 px-4 border-b">
+							<button class="btn-blue" hx-get={ templ.URL(fmt.Sprintf("/server/%s", name)) } hx-target="#content" hx-swap="innerHTML">View/Edit</button>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	</div>
+	if len(names) == 0 {
+		<p class="mt-4 text-gray-600">No server metadata found. Seed some data first!</p>
+	}
+}

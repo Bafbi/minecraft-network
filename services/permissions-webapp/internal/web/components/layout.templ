@@ -1,0 +1,31 @@
+package components
+
+templ PageLayout(title string, content templ.Component) {
+	<html>
+		<head>
+			<title>{ title } | Permissions Management</title>
+			<script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+
+			// Add any CSS links here
+			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@latest/css/pico.min.css"/> // Pico.css for simple styling
+		</head>
+		<body>
+			<main class="container">
+				<nav>
+					<ul>
+						<li><strong>Permissions</strong></li>
+					</ul>
+					<ul>
+						<li><a href="/policies">Policies (P)</a></li>
+						<li><a href="/groups">Groups (G)</a></li>
+					</ul>
+				</nav>
+				<h1>{ title }</h1>
+				<div id="content-area">
+					@content
+				</div>
+				<div id="notifications"></div> // For HTMX to put status messages
+			</main>
+		</body>
+	</html>
+}

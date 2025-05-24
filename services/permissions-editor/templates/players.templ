@@ -1,0 +1,31 @@
+// services/permissions-editor/templates/players.gohtml
+package templates
+
+import "fmt"
+
+templ PlayersList(uuids []string) {
+	<h2 class="text-2xl font-bold mb-4">Player Metadata</h2>
+	<div class="overflow-x-auto">
+		<table class="min-w-full bg-white border border-gray-200">
+			<thead>
+				<tr>
+					<th class="py-2 px-4 border-b">Player UUID</th>
+					<th class="py-2 px-4 border-b">Actions</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, uuid := range uuids {
+					<tr>
+						<td class="py-2 px-4 border-b">{ uuid }</td>
+						<td class="py-2 px-4 border-b">
+							<button class="btn-blue" hx-get={ templ.URL(fmt.Sprintf("/player/%s", uuid)) } hx-target="#content" hx-swap="innerHTML">View/Edit</button>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	</div>
+	if len(uuids) == 0 {
+		<p class="mt-4 text-gray-600">No player metadata found. Seed some data first!</p>
+	}
+}

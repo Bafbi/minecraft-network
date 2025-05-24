@@ -1,0 +1,25 @@
+# Go
+*.bak
+*.exe
+*.test
+*.prof
+/auth_service # The compiled binary (we'll copy it from the builder stage)
+#/vendor/
+/go.sum       # go.mod and go.sum are copied early to leverage cache
+
+# Git
+.git
+.gitignore
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build artifacts
+bin/
+obj/
+
+# Client tools (not needed in the server image)
+client/

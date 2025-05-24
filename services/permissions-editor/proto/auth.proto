@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package auth;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+
+option go_package = ".;auth";
+
+// AuthRequest represents a permission check request.
+// It now only contains identifiers for the PDP to fetch metadata.
+message AuthRequest {
+    string player_uuid = 1;
+    string player_name = 2; // For logging/auditing
+
+    // The server the action is related to (e.g., target server for connection, server where command is executed).
+    // Can be empty if action is network-wide and not server-specific.
+    string server_name = 3;
+
+    // The action being performed (e.g., "connect", "command:/kick", "command:/ban")
+    string action = 4;
+
+    // The resource the action is being performed on (e.g., "server:survival", "command:kick")
+    string resource = 5;
+}
+
+// AuthResponse contains the result of a permission check.
+message AuthResponse {
+    bool allowed = 1;
+    string message = 2; // Optional message for debugging/reason
+}
+
+// PolicyRule (remains the same as metadata is pulled by PDP now)
+message PolicyRule {
+    string id = 1;
+    string target_action = 2;
+    string target_resource = 3;
+    string player_condition_expression = 4; // e.g., "r.player['role'] == 'admin'"
+    string server_condition_expression = 5; // e.g., "r.server['current_players'] < r.server['max_player']"
+    string effect = 6; // "allow" or "deny"
+    int32 priority = 7;
+}
+
+// PolicyManagementRequest for adding/removing policies
+message PolicyManagementRequest {
+    repeated PolicyRule rules = 1;
+}
+
+// PolicyManagementResponse
+message PolicyManagementResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+// AuthService provides permission checking and policy management.
+service AuthService {
+    rpc CheckPermission(AuthRequest) returns (AuthResponse);
+    rpc AddPolicy(PolicyManagementRequest) returns (PolicyManagementResponse);
+    rpc RemovePolicy(PolicyManagementRequest) returns (PolicyManagementResponse);
+    rpc ListPolicies(google.protobuf.Empty) returns (PolicyManagementRequest);
+}
